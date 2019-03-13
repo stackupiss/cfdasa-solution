@@ -1,17 +1,3 @@
-apiVersion: v1
-kind: Secret
-
-metadata:
-   name: myapp-secret
-   namespace: workshop02
-   labels:
-      group: workshop02
-      name: myapp-secret
-
-data:
-   DB_PASSWORD: Y2hhbmdlaXQ=
-
----
 apiVersion: apps/v1
 kind: Deployment
 
@@ -34,11 +20,11 @@ spec:
          labels:
             name: myapp-pod
             group: workshop02
-            version: v1
+            version: v2
       spec:
          containers:
          - name: myapp
-           image: stackupiss/northwind-app:v1
+           image: stackupiss/northwind-app:v2
            imagePullPolicy: IfNotPresent
            env:
            - name: DB_HOST
@@ -59,24 +45,3 @@ spec:
       rollingUpdate:
          maxSurge: 1
          maxUnavailable: 1
-
----
-
-apiVersion: v1
-kind: Service
-
-metadata:
-   name: myapp-svc
-   namespace: workshop02
-   labels:
-      name: myapp-svc
-      group: workshop02
-
-spec:
-   type: LoadBalancer
-   selector:
-      name: myapp-pod
-      group: workshop02
-   ports:
-   - port: 80
-     targetPort: 3000

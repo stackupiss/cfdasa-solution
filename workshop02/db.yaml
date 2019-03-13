@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+   name: mydb-pvc
+   namespace: workshop02
+   labels:
+      group: workshop02
+      name: mydb-pvc
+   annotations:
+      volume.beta.kubernetes.io/storage-provisioner: "dobs.csi.digitalocean.com"   
+
+spec:
+   storageClassName: do-block-storage
+   accessModes:
+   - ReadWriteOnce
+   resources:
+      requests:
+         storage: 10Gi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+   name: mydb-deploy
+   namespace: workshop02
+   labels:
+      name: mydb-deploy
+      group: workshop02
+      version: v1
+
+spec:
+   replicas: 1
+   selector:
+      matchLabels:
+         name: mydb-pod
+         group: workshop02
+
+   template:
+      metadata:
+         name: mydb-pod
+         labels:
+            name: mydb-pod
+            group: workshop02
+      spec:
+         volumes:
+         - name: mydb-vol
+           persistentVolumeClaim:
+              claimName: mydb-pvc
+         initContainers:
+         - name: mydb-vol-scrub
+           image: busybox
+           command: ["/bin/sh", "-c", "test -e /scrub && rm -rf /scrub/..?* /scrub/.[!.]* /scrub/*  && test -z \"$(ls -A /scrub)\" || exit 1"]
+           volumeMounts:
+           - name: mydb-vol
+             mountPath: /scrub
+         containers:
+         - name: mydb
+           image: stackupiss/northwind-db:v1
+           imagePullPolicy: IfNotPresent
+           ports:
+           - containerPort: 3000
+           volumeMounts:
+           - name: mydb-vol
+             mountPath: /var/lib/mysql
+
+---
+
+apiVersion: v1
+kind: Service
+
+metadata:
+   name: mydb-svc
+   namespace: workshop02
+   labels:
+      name: mydb-svc
+      group: workshop02
+      version: v1
+
+spec:
+   type: ClusterIP
+   selector:
+      name: mydb-pod
+      group: workshop02
+   ports:
+   - port: 3306
+     targetPort: 3306

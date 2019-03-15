@@ -54,6 +54,9 @@ spec:
              valueFrom:
                 fieldRef:
                    fieldPath: status.podIP
+           resources:
+              requests:
+                 cpu: 200m
    strategy:
       type: RollingUpdate
       rollingUpdate:

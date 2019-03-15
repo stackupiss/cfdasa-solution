@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+   name: weather-deploy
+   namespace: workshop03
+   labels:
+      name: weather-deploy
+      version: v1
+
+spec:
+   replicas: 2
+   selector:
+      matchLabels:
+         name: weather-pod
+   template:
+      metadata:
+         name: weather-pod
+         labels:
+            name: weather-pod
+            version: v1
+      spec:
+         containers:
+         - name: weather
+           image: stackupiss/weather:v1
+           imagePullPolicy: IfNotPresent
+           ports:
+           - containerPort: 3000
+           env:
+           - name: APP_ID
+             value: "e1442c8139379dae7d7c49850b163ae2"
+           livenessProbe:
+              httpGet:
+                 path: /health
+                 port: 3000
+
+---
+
+apiVersion: v1
+kind: Service
+
+metadata:
+   name: weather-svc
+   namespace: workshop03
+   labels:
+      name: weather-svc
+
+spec:
+   type: ClusterIP
+   selector:
+      name: weather-pod
+   ports:
+   - port: 80
+     targetPort: 3000

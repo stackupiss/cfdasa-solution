@@ -1,3 +1,6 @@
+Digital Ocean
+	Install metrics-server
+
 Create the namespace
 
 	kubectl apply -f ns.yaml

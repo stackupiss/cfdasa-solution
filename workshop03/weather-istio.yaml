@@ -1,0 +1,55 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+
+metadata:
+   name: openweathermap
+
+spec:
+   hosts:
+   - api.openweathermap.org
+   ports:
+   - name: http
+     number: 80
+     protocol: HTTP
+   location: MESH_EXTERNAL
+   resolution: DNS
+
+--- 
+
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+
+metadata:
+   name: weather-ingressgateway
+
+spec:
+   selector:
+      istio: ingressgateway
+   servers:
+   - port:
+         number: 80
+         name: http
+         protocol: HTTP
+     hosts:
+     - weather-ingress-virtualservice.workshop03.svc.cluster.local
+
+--- 
+
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+
+metadata:
+   name: weather-ingress-virtualservice
+
+spec:
+   hosts:
+   - "*"
+   gateways:
+   - weather-ingressgateway
+   http:
+   - route:
+     - destination:
+            host: weather-svc.workshop03.svc.cluster.local
+            port:
+               number: 80
+       weight: 100

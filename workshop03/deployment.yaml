@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: weatherapp-deployment
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: weatherapp
+        version: v1
+    spec:
+      containers:
+      - name: weatherappcontainer
+        image: stackupiss/weather:v1
+        env:
+          - name: APP_ID
+            value: __YOUR_TOKEN_HERE__
+          - name: DEFAULT_CITY
+            value: Singapore
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 3000

@@ -28,7 +28,7 @@ spec:
            - containerPort: 3000
            env:
            - name: APP_ID
-             value: "e1442c8139379dae7d7c49850b163ae2"
+             value: __YOUR_TOKEN_HERE__
            livenessProbe:
               httpGet:
                  path: /health

@@ -1,0 +1,59 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+
+metadata:
+   name: mydb-deploy
+   namespace: myns
+   labels: 
+      app.kubernetes.io/name: mydb-deploy
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: database
+      app.kubernetes.io/part-of: mysuite
+
+spec:
+   minReadySeconds: 60
+   replicas: 1
+   selector:
+      matchLabels:
+         app.kubernetes.io/name: mydb-pod
+   template:
+      metadata:
+         labels:
+            app.kubernetes.io/name: mydb-pod
+      spec:
+         containers:
+         - name: mydb
+           image: stackupiss/northwind-db:v1
+           imagePullPolicy: Always
+           ports:
+           - name: mysql
+             containerPort: 3306
+           livenessProbe:
+              periodSeconds: 60
+              exec:
+                 command:
+                 - /usr/bin/mysqladmin
+                 - ping
+
+---
+kind: Service
+apiVersion: v1
+
+metadata:
+   name: mydb-svc
+   namespace: myns
+   labels:
+      app.kubernetes.io/name: mydb-svc
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: database-service
+      app.kubernetes.io/part-of: mysuite
+
+spec:
+   type: ClusterIP
+   selector:
+      app.kubernetes.io/name: mydb-pod
+   ports:
+   - port: 3306
+     targetPort: mysql
+

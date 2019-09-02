@@ -1,0 +1,21 @@
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v1
+
+metadata:
+   name: myapp-hpa
+   namespace: myns
+   labels:
+      app.kubernetes.io/name: myapp-hpa
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: autoscaler
+      app.kubernetes.io/part-of: mysuite
+
+spec:
+   maxReplicas: 4
+   minReplicas: 2
+   targetCPUUtilizationPercentage: 10
+   scaleTargetRef:
+      kind: Deployment
+      apiVersion: apps/v1
+      name: myapp-deploy-v1

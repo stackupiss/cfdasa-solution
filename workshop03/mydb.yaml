@@ -1,0 +1,99 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+
+metadata:
+   name: mydb-pvc
+   namespace: myns
+   labels:
+      app.kubernetes.io/name: mydb-pvc
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: storage-10gb
+      app.kubernetes.io/part-of: mysuite
+   annotations:
+      volume.beta.kubernetes.io/storage-provisioner: dobs.csi.digitalocean.com
+
+spec:
+   accessModes:
+   - ReadWriteOnce
+   resources:
+      requests:
+         storage: 10Gi
+   storageClassName: do-block-storage
+
+---
+kind: Deployment
+apiVersion: apps/v1
+
+metadata:
+   name: mydb-deploy
+   namespace: myns
+   labels: 
+      app.kubernetes.io/name: mydb-deploy
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: database
+      app.kubernetes.io/part-of: mysuite
+
+spec:
+   minReadySeconds: 60
+   replicas: 1
+   selector:
+      matchLabels:
+         app.kubernetes.io/name: mydb-pod
+   template:
+      metadata:
+         labels:
+            app.kubernetes.io/name: mydb-pod
+      spec:
+         volumes:
+         - name: mysql-vol
+           persistentVolumeClaim:
+              claimName: mydb-pvc
+
+         initContainers:
+         - name: busybox
+           image: busybox
+           command: ["/bin/sh", "-c", "test -e /scrub && rm -rf /scrub/..?* /scrub/.[!.]* /scrub/*  && test -z \"$(ls -A /scrub)\" || exit 1"]
+           volumeMounts:
+           - name: mysql-vol
+             mountPath: /scrub
+
+         containers:
+         - name: mydb
+           image: stackupiss/northwind-db:v1
+           imagePullPolicy: Always
+           ports:
+           - name: mysql
+             containerPort: 3306
+
+           volumeMounts:
+           - name: mysql-vol
+             mountPath: /var/lib/mysql
+
+           livenessProbe:
+              periodSeconds: 60
+              exec:
+                 command:
+                 - /usr/bin/mysqladmin
+                 - ping
+---
+kind: Service
+apiVersion: v1
+
+metadata:
+   name: mydb-svc
+   namespace: myns
+   labels:
+      app.kubernetes.io/name: mydb-svc
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: database-service
+      app.kubernetes.io/part-of: mysuite
+
+spec:
+   type: ClusterIP
+   selector:
+      app.kubernetes.io/name: mydb-pod
+   ports:
+   - port: 3306
+     targetPort: mysql
+

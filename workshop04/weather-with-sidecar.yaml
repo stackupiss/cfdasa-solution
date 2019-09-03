@@ -1,0 +1,217 @@
+---
+kind: Namespace
+apiVersion: v1
+
+metadata:
+   name: weatherns
+   labels:
+      app.kubernetes.io/name: weatherns
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: config
+      app.kubernetes.io/part-of: weatherapp
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: application
+    app.kubernetes.io/name: weather-deploy
+    app.kubernetes.io/part-of: weatherapp
+    app.kubernetes.io/version: v1
+  name: weather-deploy
+  namespace: weatherns
+spec:
+  minReadySeconds: 5
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: weather-pod
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db07324894aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: application
+        app.kubernetes.io/name: weather-pod
+        app.kubernetes.io/part-of: weatherapp
+        app.kubernetes.io/version: v1
+      name: weather-pod
+      namespace: weatherns
+    spec:
+      containers:
+      - env:
+        - name: APP_ID
+          value: 46ed008194f7dd3a9abd20f5fdb4fc59
+        image: stackupiss/weather:v1
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: weather-port
+        name: weather
+        ports:
+        - containerPort: 3000
+          name: weather-port
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: weather-port
+        resources: {}
+      - args:
+        - proxy
+        - sidecar
+        - --domain
+        - $(POD_NAMESPACE).svc.cluster.local
+        - --configPath
+        - /etc/istio/proxy
+        - --binaryPath
+        - /usr/local/bin/envoy
+        - --serviceCluster
+        - weather-deploy.weatherns
+        - --drainDuration
+        - 45s
+        - --parentShutdownDuration
+        - 1m0s
+        - --discoveryAddress
+        - istio-pilot.istio-system:15010
+        - --zipkinAddress
+        - zipkin.istio-system:9411
+        - --dnsRefreshRate
+        - 300s
+        - --connectTimeout
+        - 10s
+        - --proxyAdminPort
+        - "15000"
+        - --concurrency
+        - "2"
+        - --controlPlaneAuthPolicy
+        - NONE
+        - --statusPort
+        - "15020"
+        - --applicationPorts
+        - "3000"
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: ISTIO_META_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: ISTIO_META_CONFIG_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: ISTIO_META_INTERCEPTION_MODE
+          value: REDIRECT
+        - name: ISTIO_META_INCLUDE_INBOUND_PORTS
+          value: "3000"
+        - name: ISTIO_METAJSON_LABELS
+          value: |
+            {"app.kubernetes.io/component":"application","app.kubernetes.io/name":"weather-pod","app.kubernetes.io/part-of":"weatherapp","app.kubernetes.io/version":"v1"}
+        image: docker.io/istio/proxyv2:1.2.5
+        imagePullPolicy: IfNotPresent
+        name: istio-proxy
+        ports:
+        - containerPort: 15090
+          name: http-envoy-prom
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz/ready
+            port: 15020
+          initialDelaySeconds: 1
+          periodSeconds: 2
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsUser: 1337
+        volumeMounts:
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
+        - mountPath: /etc/certs/
+          name: istio-certs
+          readOnly: true
+      initContainers:
+      - args:
+        - -p
+        - "15001"
+        - -u
+        - "1337"
+        - -m
+        - REDIRECT
+        - -i
+        - '*'
+        - -x
+        - ""
+        - -b
+        - "3000"
+        - -d
+        - "15020"
+        image: docker.io/istio/proxy_init:1.2.5
+        imagePullPolicy: IfNotPresent
+        name: istio-init
+        resources:
+          limits:
+            cpu: 100m
+            memory: 50Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+          runAsNonRoot: false
+          runAsUser: 0
+      volumes:
+      - emptyDir:
+          medium: Memory
+        name: istio-envoy
+      - name: istio-certs
+        secret:
+          optional: true
+          secretName: istio.default
+status: {}
+---
+kind: Service
+apiVersion: v1
+
+metadata:
+   name: weather-svc
+   namespace: weatherns
+   labels:
+      app.kubernetes.io/name: weather-svc
+      app.kubernetes.io/version: "v1"
+      app.kubernetes.io/component: service
+      app.kubernetes.io/part-of: weatherapp
+
+spec:
+   type: ClusterIP
+   selector:
+      app.kubernetes.io/name: weather-pod
+
+   ports:
+   - port: 80
+     targetPort: weather-port
+---

@@ -1,0 +1,27 @@
+Pre-req 
+	Install Helm and Tiller with cluster-admin role
+
+Download distribution
+	$ curl -L https://git.io/getLatestIstio | ISTIO_VERSION=1.2.5 sh -
+
+Set path to istioctl in <distribution_distribution>/bin
+
+Create istio-system namespace
+	kubectl create ns istio-system
+
+Install Istio CRDS
+	helm install install/kubernetes/helm/istio-init --name istio-init --namespace istio-system
+
+	kubectl get crds | grep istio.io | wc -l == 23
+
+Install Istio / default profile
+	helm install install/kubernetes/helm/istio --name istio --namespace istio-system 
+
+Inject sidecar to deployment
+	istioctl kube-inject -f weather.yaml > weather-with-sidecar.yaml
+
+Deploy deployment with sidecar
+	kubectl apply -f weather-with-sidecar.yaml
+
+Deploy gateway
+	kubectl apply -f weather-istio.yaml

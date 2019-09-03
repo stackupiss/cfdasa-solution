@@ -19,3 +19,6 @@ Deploy v1 and v2 version of the application
 
 Deploy the ingress
 	kubectl apply -f myapp_ingress.yaml
+
+Deploy autoscaling
+	kubectl apply -f myapp_hpa.yaml

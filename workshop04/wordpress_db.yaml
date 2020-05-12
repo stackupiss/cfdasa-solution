@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+   name: wordpress
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+   name: wordpress-secret
+   namespace: wordpress
+   labels:
+      app: wordpress-database
+data:
+   ROOT_PASSWORD: cm9vdHJvb3Q=
+
+---
+apiVersion: mysql.presslabs.org/v1alpha1
+kind: MysqlCluster
+metadata:
+   name: wordpress-mysql
+   namespace: wordpress
+   labels:
+      app: wordpress-database
+spec:
+   replicas: 2
+   secretName: wordpress-secret
+   volumeSpec:
+      persistentVolumeClaim:
+         accessModes:
+         - ReadWriteOnce
+         resources:
+            requests:
+               # minimum for DO storage class
+               storage: 1Gi
+         storageClassName: do-block-storage 

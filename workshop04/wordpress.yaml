@@ -7,7 +7,7 @@ metadata:
    labels:
       app: wordpress
 data:
-   WORDPRESS_DB_HOST: wordpress-mysql-mysql.wordpress.svc.cluster.local
+   WORDPRESS_DB_HOST: wordpress-mysql-mysql-master.wordpress.svc.cluster.local
    WORDPRESS_DB_USER: root
    WORDPRESS_DB_NAME: wordpressdb
 
